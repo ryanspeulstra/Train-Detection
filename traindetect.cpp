@@ -8,7 +8,6 @@
 
 int main(int argc, char* argv[]) {
 
-   // std::string url = "https://www.youtube.com/watch?v=XjtbMoq0aM0";  // Livestream URL
 	std::string url = argv[1];
     std::string command =
         "yt-dlp -o - " + url +
@@ -71,9 +70,9 @@ int main(int argc, char* argv[]) {
 
             std::cerr << std::put_time(&localTime, "%Y-%m-%d %H:%M:%S")
                       << " - Non-zero pixels: " << nonZeroPixels << std::endl;
-		if (nonZeroPixels > 1000 && nonZeroPixels < 3000) {
+		if (nonZeroPixels > 1000 && nonZeroPixels < 3000) { // Smallest statistically significant change
 		std::cout << "Detected Change: Car Likely" << std::endl;
-		} else if (nonZeroPixels > 3000 && nonZeroPixels < 15000) {
+		} else if (nonZeroPixels > 3000 && nonZeroPixels < 15000) { // Middle threshold for smaller change
 		std::cout << "Detected Change: Multiple Cars Likely" << std::endl;
 		} else  if (nonZeroPixels > 15000) {  // Higher threshold for detecting significant change
                 std::cout << "Detected Change, Train Likely - Saving Frame" << std::endl;
