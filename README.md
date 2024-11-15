@@ -11,13 +11,13 @@ Running:
 ``` train_detect.cpp [URL] ```
 
 Features:
-> Detection of Pixel changes
+> Detection of Pixel changes, 
 > Prints frame when threshold reached
 
 Future Features:
-> Custom Detection Thresholds
-> Custom Frame (only capturing a section of the stream)
-> External output
+> Custom Detection Thresholds,
+> Custom Frame (only capturing a section of the stream),
+> External output,
 > Proper Error Handling
 
 
