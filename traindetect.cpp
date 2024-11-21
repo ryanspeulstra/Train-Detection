@@ -7,8 +7,12 @@
 #include <sstream>
 
 int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        std::cerr << "Usage: " << argv[0] << " <YouTube URL>" << std::endl;
+        return -1;
+    }
 
-	std::string url = argv[1];
+    std::string url = argv[1];
     std::string command =
         "yt-dlp -o - " + url +
         " | ffmpeg -loglevel quiet -i pipe:0 -f rawvideo -pix_fmt bgr24 pipe:1";
@@ -23,14 +27,21 @@ int main(int argc, char* argv[]) {
     int frameHeight = 1080;  // Adjust according to the livestream resolution
     int frameSize = frameWidth * frameHeight * 3;
 
-    cv::Mat previousFrame, currentFrame, previousGray, currentGray, frameDifference;
+    cv::Mat previousGray, currentFrame, currentGray, frameDifference;
     std::vector<unsigned char> buffer(frameSize);
+
+    int frameCounter = 0;        // Counter to skip every other frame
 
     while (true) {
         size_t bytesRead = fread(buffer.data(), 1, frameSize, pipe);
         if (bytesRead != frameSize) {
             std::cerr << "Error reading frame data: expected " << frameSize << " bytes, but got " << bytesRead << std::endl;
             break;
+        }
+
+        frameCounter++;
+        if (frameCounter % 2 != 0) {
+            continue;  // Skip every other frame
         }
 
         // Create current frame from the raw buffer data
@@ -70,17 +81,20 @@ int main(int argc, char* argv[]) {
 
             std::cerr << std::put_time(&localTime, "%Y-%m-%d %H:%M:%S")
                       << " - Non-zero pixels: " << nonZeroPixels << std::endl;
-		if (nonZeroPixels > 1000 && nonZeroPixels < 3000) { // Smallest statistically significant change
-		std::cout << "Detected Change: Car Likely" << std::endl;
-		} else if (nonZeroPixels > 3000 && nonZeroPixels < 15000) { // Middle threshold for smaller change
-		std::cout << "Detected Change: Multiple Cars Likely" << std::endl;
-		} else  if (nonZeroPixels > 15000) {  // Higher threshold for detecting significant change
+
+            if (nonZeroPixels > 1000 && nonZeroPixels < 3000) {
+                std::cout << "Detected Change: Car Likely" << std::endl;
+            } else if (nonZeroPixels > 3000 && nonZeroPixels < 15000) {
+                std::cout << "Detected Change: Multiple Cars Likely" << std::endl;
+            } else if (nonZeroPixels > 20000) {  // Higher threshold for significant change
                 std::cout << "Detected Change, Train Likely - Saving Frame" << std::endl;
+
                 // Save the frame as an image
                 std::ostringstream filename;
-                filename << "Detected_Frame_" << std::put_time(&localTime, "%Y%m%d_%H%M%S") << ".png";
+                filename << "frames" << "/Detected_Frame_" << std::put_time(&localTime, "%Y%m%d_%H%M%S") << ".png";
                 cv::imwrite(filename.str(), currentFrame);
-            }
+
+                }
         }
 
         // Store the current frame for the next iteration
