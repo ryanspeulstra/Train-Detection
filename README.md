@@ -20,6 +20,7 @@ Running:
 URL - The url of the livestream that you would like to use.
 
 OPTIONAL TEST FLAGS
+
 SECTION - The section of the livestream that you wish to analyze, split into 16 pieces, with 1 as the top left. test.cpp will analyze whatever is in the frame, traincrop.cpp will analyze the whole stream but only display the frame.
 
 THRESHOLD - The amount of pixel changes that fires off a capture command for the frame.
