@@ -6,7 +6,9 @@ When a certain threshold is reached, it captures and saves the frame.
 
 Compilation:
 ``` g++ -o traindetect train_detect.cpp 'pkg-config --cflags --libs opencv4' ```
+
 ``` g++ -o traincrop traincrop.cpp 'pkg-config --cflags --libs opencv4' ``` BETA
+
 ``` g++ -o test test.cpp 'pkg-config --cflags --libs opencv4' ``` ALPHA
 
 
