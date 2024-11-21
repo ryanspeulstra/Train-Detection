@@ -6,9 +6,18 @@ When a certain threshold is reached, it captures and saves the frame.
 
 Compilation:
 ``` g++ -o traindetect train_detect.cpp 'pkg-config --cflags --libs opencv4' ```
+``` g++ -o test test.cpp 'pkg-config --cflags --libs opencv4' ``` [ALPHA]
+
 
 Running:
-``` train_detect.cpp [URL] ```
+``` ./traindetect [URL] ```
+``` ./test [URL] -section [SECTION] -threshold [THRESHOLD] ```
+
+[URL] - The url of the livestream that you would like to use.
+
+OPTIONAL BETA FLAGS
+[SECTION] - The section of the livestream that you wish to analyze, split into 16 pieces, with 1 as the top left.
+[THRESHOLD] - The amount of pixel changes that fires off a capture command for the frame.
 
 Features:
 > Detection of Pixel changes, 
