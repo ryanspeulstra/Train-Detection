@@ -14,7 +14,8 @@ Compilation:
 
 Running:
 ``` ./traindetect [URL] ```
-``` ./test [URL] -section [SECTION] -threshold [THRESHOLD] ```
+
+``` ./test(traincrop) [URL] -section [SECTION] -threshold [THRESHOLD] ```
 
 URL - The url of the livestream that you would like to use.
 
