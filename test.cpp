@@ -5,17 +5,38 @@
 #include <chrono>
 #include <iomanip>
 #include <sstream>
-#include <filesystem>
 
-namespace fs = std::filesystem;
+// Function to parse command-line arguments
+bool parseArguments(int argc, char* argv[], std::string& url, int& section, int& threshold) {
+    if (argc < 2) {
+        std::cerr << "Usage: " << argv[0] << " <YouTube URL> -section <SECTION> -threshold <THRESHOLD>" << std::endl;
+        return false;
+    }
+
+    url = argv[1];
+    section = 1;      // Default to top-left section
+    threshold = 20000; // Default threshold
+
+    for (int i = 2; i < argc; i++) {
+        if (std::string(argv[i]) == "-section" && i + 1 < argc) {
+            section = std::stoi(argv[i + 1]);
+            i++;
+        } else if (std::string(argv[i]) == "-threshold" && i + 1 < argc) {
+            threshold = std::stoi(argv[i + 1]);
+            i++;
+        }
+    }
+
+    return true;
+}
 
 int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <YouTube URL>" << std::endl;
+    std::string url;
+    int section, threshold;
+    if (!parseArguments(argc, argv, url, section, threshold)) {
         return -1;
     }
 
-    std::string url = argv[1];
     std::string command =
         "yt-dlp -o - " + url +
         " | ffmpeg -loglevel quiet -i pipe:0 -f rawvideo -pix_fmt bgr24 pipe:1";
@@ -33,24 +54,24 @@ int main(int argc, char* argv[]) {
     cv::Mat previousGray, currentFrame, currentGray, frameDifference;
     std::vector<unsigned char> buffer(frameSize);
 
-    int frameCounter = 0;        // Counter to skip every other frame
+    // Calculate cropping boundaries for the selected section
+    int cols = 4; // Number of columns in the grid
+    int rows = 4; // Number of rows in the grid
+    int sectionWidth = frameWidth / cols;
+    int sectionHeight = frameHeight / rows;
 
-    // Ensure the frames directory exists
-    std::string framesDir = "frames";
-    if (!fs::exists(framesDir)) {
-        fs::create_directory(framesDir);
-    }
+    int sectionX = ((section - 1) % cols) * sectionWidth;
+    int sectionY = ((section - 1) / cols) * sectionHeight;
+
+    std::cout << "Processing section: " << section
+              << " (x: " << sectionX << ", y: " << sectionY
+              << ", width: " << sectionWidth << ", height: " << sectionHeight << ")" << std::endl;
 
     while (true) {
         size_t bytesRead = fread(buffer.data(), 1, frameSize, pipe);
         if (bytesRead != frameSize) {
             std::cerr << "Error reading frame data: expected " << frameSize << " bytes, but got " << bytesRead << std::endl;
             break;
-        }
-
-        frameCounter++;
-        if (frameCounter % 2 != 0) {
-            continue;  // Skip every other frame
         }
 
         // Create current frame from the raw buffer data
@@ -61,17 +82,12 @@ int main(int argc, char* argv[]) {
             break;
         }
 
-        // Resize the frame to a smaller size for output
-        int outputWidth = 640;   // New width for the resized output stream
-        int outputHeight = 360;  // New height for the resized output stream
-        cv::Mat resizedFrame;
-        cv::resize(currentFrame, resizedFrame, cv::Size(outputWidth, outputHeight));
+        // Crop the frame to the selected section
+        cv::Rect cropRegion(sectionX, sectionY, sectionWidth, sectionHeight);
+        cv::Mat croppedFrame = currentFrame(cropRegion);
 
-        // Display the resized frame
-        cv::imshow("Livestream (Resized)", resizedFrame);
-
-        // Convert current frame to grayscale
-        cv::cvtColor(currentFrame, currentGray, cv::COLOR_BGR2GRAY);
+        // Convert cropped frame to grayscale
+        cv::cvtColor(croppedFrame, currentGray, cv::COLOR_BGR2GRAY);
 
         if (!previousGray.empty()) {
             // Calculate absolute difference between the current and previous grayscale frame
@@ -91,23 +107,26 @@ int main(int argc, char* argv[]) {
             std::cerr << std::put_time(&localTime, "%Y-%m-%d %H:%M:%S")
                       << " - Non-zero pixels: " << nonZeroPixels << std::endl;
 
-            // Detect changes and save frames based on thresholds
+            // Detection logic
             if (nonZeroPixels > 1000 && nonZeroPixels < 3000) {
-                std::cout << "Detected Change: Single Car Likely" << std::endl;
+                std::cout << "Detected Change: Car Likely" << std::endl;
             } else if (nonZeroPixels > 3000 && nonZeroPixels < 15000) {
                 std::cout << "Detected Change: Multiple Cars Likely" << std::endl;
-            } else if (nonZeroPixels > 40000) {  // Higher threshold for significant change
+            } else if (nonZeroPixels > threshold) {
                 std::cout << "Detected Change, Train Likely - Saving Frame" << std::endl;
 
-                // Save the frame as an image
+                // Save the cropped frame as an image
                 std::ostringstream filename;
-                filename << framesDir << "/Detected_Frame_" << std::put_time(&localTime, "%Y%m%d_%H%M%S") << ".png";
-                cv::imwrite(filename.str(), currentFrame);
+                filename << "frames/Detected_Frame_" << std::put_time(&localTime, "%Y%m%d_%H%M%S") << ".png";
+                cv::imwrite(filename.str(), croppedFrame);
             }
         }
 
-        // Store the current frame for the next iteration
+        // Store the current cropped frame for the next iteration
         currentGray.copyTo(previousGray);
+
+        // Display the cropped section
+        cv::imshow("Selected Section", croppedFrame);
 
         // Exit if the window is closed
         if (cv::waitKey(1) == 'q') {
